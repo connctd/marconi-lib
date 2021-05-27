@@ -1,0 +1,19 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/home/sgarn/.arduino15/packages/esp8266/hardware/**",
+                "/home/sgarn/Arduino/libraries/**",
+                "/home/sgarn/.arduino15/packages/esp8266/hardware/esp8266/2.7.4/libraries/ESP8266WiFi/**"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}
