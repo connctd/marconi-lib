@@ -148,11 +148,6 @@ void Encryption::increaseIvPos(int pos) {
 	}
 }
 
-uint8_t Encryption::randomChar() {
-    uint8_t really_random = *(volatile uint8_t *)0x3FF20E44;
-    return really_random;
-}
-
 
 void Encryption::randomBytes(uint8_t *arr, size_t size) {
     for (size_t i = 0; i < size; i++) {

@@ -15,6 +15,10 @@ void Eventing::error(unsigned char err) {
 }
 
 void Eventing::debugBytes(unsigned char *b, int len) {
+	if (!debug_callback_) {
+		return;
+	}
+
 	// we are generating 2 chars per byte
     char buf[2*len];
 	memset(buf, 0, 2*len*sizeof(char));
@@ -30,6 +34,10 @@ void Eventing::debugBytes(unsigned char *b, int len) {
 }
 
 void Eventing::debugByte(unsigned char b) {
+	if (!debug_callback_) {
+		return;
+	}
+
 	char tmp[4];
 
 	sprintf(tmp, "%02X", b);

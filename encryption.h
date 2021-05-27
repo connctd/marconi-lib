@@ -42,7 +42,6 @@ class Encryption{
 		void increaseIvPos(int pos);
 
 		void randomBytes(uint8_t *arr, size_t size);
-		uint8_t randomChar();
 };
 
 const uint8_t kErrorInvalidPlaintextSize = 0x01;

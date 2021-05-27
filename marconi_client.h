@@ -27,7 +27,7 @@ class MarconiClient{
 
 		// can be used to send a property update
 		void sendRawPropertyUpdate(char property_id[PROPERTY_ID_SIZE], char *value);
-		void sendFloatPropertyUpdate(const char property_id[PROPERTY_ID_SIZE], float value);
+		void sendFloatPropertyUpdate(char property_id[PROPERTY_ID_SIZE], float value);
 
 		void subscribeForActions(actionCallback *action_callback);
 
@@ -71,13 +71,20 @@ class MarconiClient{
 		// lib stores last init msg id here
 		uint16_t last_init_msg_id_;
 
+		// informs about connection state changes
 		connectionStateCallback *connection_state_callback_;
 
+		// is called whenever an action request was received
 		actionCallback *action_callback_;
 
+		// client used to send coap messages
 		coapClient coap_;
 
-		coapPacket *buildAck(uint16_t messageid);
+		// packet handling functions
+		void handleSessionResponse(coapPacket &packet, IPAddress ip, int port);
+		void handleObservationResponse(coapPacket &packet, IPAddress ip, int port);
+		void handlePing(coapPacket &packet, IPAddress ip, int port);
+		void handleRequest(coapPacket &packet, IPAddress ip, int port);
 };
 
 /*
@@ -109,6 +116,15 @@ const uint8_t kConnectionObservationRejected = 0x08;
 // received session has invalid size
 const uint8_t kErrorInvalidSessionSize = 0x41;
 
-const uint8_t kCodeCreated = 0x41;
+const uint8_t kErrorDecryptionFailed = 0x42;
+const uint8_t kErrorEncryptionFailed = 0x43;
+
+// the action request was rejected presumably because of bad action id
+const uint8_t kErrorActionRequestRejected = 0x44;
+
+const uint8_t kMessageCodeCreated = 0x41;
+
+// used for action requests
+const uint8_t kMessageCodeContent = 0x45;
 
 #endif // MARCONI_CLIENT_H_

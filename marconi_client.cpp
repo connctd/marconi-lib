@@ -62,7 +62,7 @@ bool MarconiClient::loop() {
 
 // can be used to send a property update
 void MarconiClient::sendRawPropertyUpdate(char property_id[PROPERTY_ID_SIZE], char *value) {
-    eventing_->debug("Sending raw value");
+    eventing_->debug("Sending property update");
 
     int unencryptedSize = sizeof(long)+SESSION_SIZE+PROPERTY_ID_SIZE+strlen(value)*sizeof(char);
     uint8_t *unencrypted = parser_->buildPropertyUpdate(property_counter_id_, session_id_, property_id, value);
@@ -70,98 +70,185 @@ void MarconiClient::sendRawPropertyUpdate(char property_id[PROPERTY_ID_SIZE], ch
     // calculate size of cipherstream
     int encryptedSize = encr_->calc_cipherstream_size(unencryptedSize);
     unsigned char encrypted[encryptedSize];
-
-	memset(encrypted, 0, encryptedSize*sizeof(unsigned char));
+    memset(encrypted, 0, sizeof(unsigned char)*encryptedSize);
 
     // do the encryption
-    bool ok = encr_->encrypt(unencrypted, unencryptedSize, encrypted, encryptedSize);
-    if (!ok) {
-        eventing_->debug("Encryption has failed");
+    if (!encr_->encrypt(unencrypted, unencryptedSize, encrypted, encryptedSize)) {
+        eventing_->debug("Encryption of property update has failed");
+        eventing_->error(kErrorEncryptionFailed);
     } else {
         property_counter_id_ += 1;
-        coap_.send(ip_, port_, path_state_, COAP_CON, COAP_POST, NULL, 0, encrypted, encryptedSize, 0, NULL);
+        uint8_t token=rand();
+        eventing_->debug("Now sending property update");
+        coap_.send(ip_, port_, path_state_, COAP_CON, COAP_POST, &token, sizeof(token), encrypted, encryptedSize, 0, NULL);
     }
 
     // free memory
     delete [] unencrypted;
 }
 
-void MarconiClient::sendFloatPropertyUpdate(const char property_id[PROPERTY_ID_SIZE], float value) {
-
+void MarconiClient::sendFloatPropertyUpdate(char property_id[PROPERTY_ID_SIZE], float value) {
+    char buf[20];
+    sprintf(buf, "%f", value);
+    sendRawPropertyUpdate(property_id, buf);
 }
 
 void MarconiClient::subscribeForActions(actionCallback *action_callback) {
+    eventing_->debug("Subscribing for action");
+
     action_callback_ = action_callback;
+
+    // inform about requested subscription
     connection_state_callback_(kConnectionObservationRequested);
-    last_observe_msg_id_ = coap_.observe(ip_, port_, path_action_, 0);
+
+    int unencryptedSize = sizeof(long)+SESSION_SIZE+PROPERTY_ID_SIZE+sizeof(char);
+    uint8_t *unencrypted = parser_->buildActionSubscription(property_counter_id_, session_id_);
+
+    // calculate size of cipherstream
+    int encryptedSize = encr_->calc_cipherstream_size(unencryptedSize);
+    unsigned char encrypted[encryptedSize];
+    memset(encrypted, 0, sizeof(unsigned char)*encryptedSize);
+
+    // do the encryption
+    if (!encr_->encrypt(unencrypted, unencryptedSize, encrypted, encryptedSize)) {
+        eventing_->debug("Encryption of action subscription has failed");
+        eventing_->error(kErrorEncryptionFailed);
+    } else {
+        property_counter_id_ += 1;
+
+        // send observe message including encrypted payload
+        uint8_t token=rand();
+        eventing_->debug("Now sending subscription request");
+        last_observe_msg_id_ = coap_.send(ip_, port_, path_action_, COAP_CON,COAP_GET, &token, sizeof(token), encrypted, encryptedSize, COAP_OBSERVE, NULL);
+    }
+
+    // free memory
+    delete [] unencrypted;
 }
 
 void MarconiClient::handleServerMessage(coapPacket &packet, IPAddress ip, int port) {
     eventing_->debug("Server message received");
 
-    if (packet.type == COAP_ACK) {
-        eventing_->debug("ACK received");
-
-        // this is the response to our init request
-        if (packet.messageid == last_init_msg_id_) {
-            if (packet.code == kCodeCreated) {
-                eventing_->debug("Session Response received");
-                if (packet.payloadlen < SESSION_SIZE) {
-                    eventing_->debug("Session has invalid size");
-                    eventing_->error(kErrorInvalidSessionSize);
-                } else {
-                    eventing_->debug("Session was initialized");
-                    memcpy(session_id_, packet.payload, SESSION_SIZE*sizeof(unsigned char));
-                    last_action_counter_id_ = 0;
-                    property_counter_id_ = rand();
-                    connection_state_callback_(kConnectionStateInitialized);
-                }
-            } else {
-                eventing_->debug("Session init rejected");
-                connection_state_callback_(kConnectionStateInitRejected);
-            }
-        }
-        // this is the response to our observation request
-        else if (packet.messageid == last_observe_msg_id_) {
-            if (packet.code == kCodeCreated) {
-                eventing_->debug("Observation accepted");
-                connection_state_callback_(kConnectionObservationOngoing);
-            } else {
-                eventing_->debug("Observation rejected");
-                connection_state_callback_(kConnectionObservationRejected);
-            }
-        }
-    } else if (packet.type == COAP_CON || packet.type == COAP_NONCON) {
-        if (packet.type == COAP_CON) {
-            eventing_->debug("Sending ACK");
-            coapPacket *ack = buildAck(packet.messageid);
-            coap_.sendPacket(*ack, ip, port);
-            delete ack;
-        }
-
-        // interprete message as an action request
-        if (packet.payloadlen > 0) {
-            if (action_callback_ != NULL) {
-                // TODO decrypt actions
-            }
+    // this is the response to our init request
+    if (packet.messageid == last_init_msg_id_) {
+        handleSessionResponse(packet, ip, port);
+    }
+    // this is the response to our observation request
+    else if (packet.messageid == last_observe_msg_id_) {
+        handleObservationResponse(packet, ip, port);
+    }
+    else if (packet.type == COAP_CON || packet.type == COAP_NONCON) {
+        if (packet.type == COAP_CON && packet.code == COAP_EMPTY) {
+            handlePing(packet, ip, port);
+        } else {
+            // check for further handling
+            handleRequest(packet, ip, port);
         }
     }
 }
 
-coapPacket *MarconiClient::buildAck(uint16_t messageid) {
-  coapPacket packet;
+void MarconiClient::handleSessionResponse(coapPacket &packet, IPAddress ip, int port) {
+    if (packet.code == kMessageCodeCreated) {
+        eventing_->debug("Session Response received");
+        if (packet.payloadlen < SESSION_SIZE) {
+            eventing_->debug("Session has invalid size");
+            eventing_->error(kErrorInvalidSessionSize);
+        } else {
+            eventing_->debug("Session was initialized");
+            memcpy(session_id_, packet.payload, SESSION_SIZE*sizeof(unsigned char));
+            last_action_counter_id_ = 0;
+            property_counter_id_ = rand();
+            connection_state_callback_(kConnectionStateInitialized);
+        }
+    } else {
+        eventing_->debug("Session init rejected");
+        connection_state_callback_(kConnectionStateInitRejected);
+    }
+}
 
-  //make packet
-  packet.type = COAP_ACK;
-  packet.code = COAP_EMPTY;
-  packet.token = NULL;
-  packet.tokenlen = 0;
-  packet.payload = NULL;
-  packet.payloadlen = 0;
-  packet.optionnum = 0;
-  packet.messageid = messageid;
+void MarconiClient::handleObservationResponse(coapPacket &packet, IPAddress ip, int port) {
+    if (packet.code == kMessageCodeCreated) {
+        eventing_->debug("Observation accepted");
+        connection_state_callback_(kConnectionObservationOngoing);
+    } else {
+        eventing_->debug("Observation rejected");
+        connection_state_callback_(kConnectionObservationRejected);
+    }
+}
 
-  return &packet;
+void MarconiClient::handlePing(coapPacket &packet, IPAddress ip, int port) {
+    eventing_->debug("Ping received. Sending Pong");
+
+    coapPacket p;
+
+    // build ack
+    p.type = COAP_ACK;
+    p.code = COAP_EMPTY;
+    p.token = NULL;
+    p.tokenlen = 0;
+    p.payload = NULL;
+    p.payloadlen = 0;
+    p.optionnum = 0;
+    p.messageid = packet.messageid;
+
+    eventing_->debug("Now sending pong");
+    coap_.sendPacket(p, ip_, port_);
+}
+
+
+void MarconiClient::handleRequest(coapPacket &packet, IPAddress ip, int port) {
+    eventing_->debug("Action request received");
+
+    // we assume this is an action request
+    if (packet.payloadlen > 0 && packet.code == kMessageCodeContent) {
+        int decryptedSize = encr_->calc_plaintext_size((size_t)packet.payloadlen);
+        
+        // create array and init with 0
+        uint8_t *decrypted = new uint8_t[decryptedSize]();
+        memset(decrypted, 0, decryptedSize*sizeof(uint8_t));
+        
+        if (!encr_->decrypt(packet.payload, packet.payloadlen, decrypted, decryptedSize)) {
+            eventing_->debug("Failed to decrypt action request");
+            eventing_->error(kErrorDecryptionFailed);
+        } else {
+            
+            ActionRequest a = parser_->parseAction(decrypted, decryptedSize);
+
+            if (a.action_counter_id < last_action_counter_id_) {
+                eventing_->debug("Action request rejected due to bad id");
+                eventing_->error(kErrorActionRequestRejected);
+            } else {
+                last_action_counter_id_ = a.action_counter_id;
+                
+                if (action_callback_) {
+                    action_callback_(a.id, a.value);
+                } else {
+                    eventing_->debug("No action callback set");
+                }
+            }
+            
+        }
+        
+        delete [] decrypted;
+    }
+
+    if (packet.type == COAP_CON) {
+        eventing_->debug("Sending ack");
+        coapPacket p;
+
+        // build ack
+        p.type = COAP_ACK;
+        p.code = COAP_EMPTY;
+        p.token = packet.token;
+        p.tokenlen = packet.tokenlen;
+        p.payload = NULL;
+        p.payloadlen = 0;
+        p.optionnum = 0;
+        p.messageid = packet.messageid;
+
+        eventing_->debug("Now sending ack");
+        coap_.sendPacket(p, ip_, port_);
+    }
 }
 
 // holds current instance

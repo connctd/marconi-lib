@@ -30,6 +30,9 @@ class Parser{
         // has to be encrypted before sending it
         uint8_t* buildPropertyUpdate(long property_counter_id, unsigned char session_id[SESSION_SIZE], char property_id[PROPERTY_ID_SIZE], char *value);
 
+        // builds an action subscription
+        uint8_t* buildActionSubscription(long counter_id, unsigned char session_id[SESSION_SIZE]);
+
         // ActionRequest needs to be deleted after it was used; payload needs to be decrypted first
         ActionRequest parseAction(uint8_t *payload, uint8_t payloadlen);
     private:
