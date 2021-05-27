@@ -3,9 +3,11 @@
 Used for communication between marconi connector and esp32. Message exchange is based on coap. Payloads are encrypted
 with ChaCha20-Poly1305.
 
-## Usage
+## Installation
 
-git@github.com:connctd/marconi-lib.git
+`cd $HOME/Arduino/libraries/` and do `git clone git@github.com:connctd/marconi-lib.git`
+
+# Usage
 
 ```
 char device_id[DEVICE_ID_SIZE] = "rqf8raquo2j3x5vc";  // 16 characters long unique device id
