@@ -1,27 +1,25 @@
 #include "marconi_client.h"
-#include <ESP8266WiFi.h>
+#include <WiFi.h> // use for ESP32
+//#include <ESP8266WiFi.h> // use for esp8266
 
 // WiFi connection info
-const char* ssid = "321";
-const char* password = "123";
+const char* ssid = "Hexentasse2";
+const char* password = "affenwurst5";
 
 // marconi settings
-IPAddress ip(192,168,1,133);
+IPAddress ip(35, 205, 82, 53);
 int port = 5683;
 
-unsigned long resubscribeInterval = 60000; // in ms
-unsigned long propertyUpdateInterval = 10000; // in ms
+unsigned long resubscribeInterval = 600000; // in ms
+unsigned long propertyUpdateInterval = 2000; // in ms
 
-char device_id[DEVICE_ID_SIZE] = "rqf8raquo2j3x5vc";  // unique device id
+char device_id[DEVICE_ID_SIZE] = "0xl7n4igwd4k8g2t";  // unique device id
 
 unsigned char key[CHACHA_KEY_SIZE] = {                // unique device key
-  0x31,0x31,0x31,0x31,0x31,
-  0x32,0x32,0x32,0x32,0x32,
-  0x33,0x33,0x33,0x33,0x33,
-  0x34,0x34,0x34,0x34,0x34,
-  0x35,0x35,0x35,0x35,0x35,
-  0x36,0x36,0x36,0x36,0x36,
-  0x37,0x37,  
+  0x61, 0x3e, 0x28, 0x39, 0x88, 0x5d, 0xf2, 0xbe,
+  0x74, 0x81, 0xb1, 0xc7, 0x3e, 0xe3, 0x8f, 0x36,
+  0x19, 0x4f, 0xe0, 0xbc, 0xd3, 0xf2, 0x1d, 0xab,
+  0x8a, 0x4c, 0x4a, 0x91, 0x7a, 0x97, 0x50, 0x5a 
 };
 
 // runtime vars
@@ -29,6 +27,8 @@ MarconiClient *c;
 unsigned long lastResubscribe = 0; // periodically resubscribe
 unsigned long lastPropertyUpdate = 0; // time when property updates were sent
 bool initialized = false; // indicates if a session was initialized
+
+int LED_BUILTIN = 2; // use for ESP32
 
 void setup() {
   // initialize pseudo random number generator since tokens are generated
@@ -59,14 +59,14 @@ void loop() {
     // resubscribe if necessary
     if (initialized && (currTime - lastResubscribe > resubscribeInterval || lastResubscribe == 0 )) {
       lastResubscribe = currTime;
-      c->subscribeForActions(onAction);
+      //c->subscribeForActions(onAction);
     }
 
     // periodically send property updates
     if (initialized && currTime - lastPropertyUpdate > propertyUpdateInterval) {
       lastPropertyUpdate = currTime;
       //c->sendRawPropertyUpdate("state", "22.0");
-      c->sendFloatPropertyUpdate("state", 22.0);
+      c->sendFloatPropertyUpdate("temperature", 22.0);
     }
 
     // wait for incoming messages
