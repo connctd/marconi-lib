@@ -76,10 +76,13 @@ Get dependencies (see below) and do `make test` afterwards.
 ```
 cd $HOME/Arduino/libraries
 
-# simulates core functionalities of arduino so you can execute tests on local machine
+# simulates core functionalities of arduino so you can execute tests on local machine (for testing)
 git clone https://github.com/bxparks/EpoxyDuino.git
 
 # library that offers crypto functionalities
 git clone https://github.com/OperatorFoundation/Crypto.git
+
+# slightly modified coap lib
+git clone git@github.com:connctd/ESP-CoAP.git
 ```
 
