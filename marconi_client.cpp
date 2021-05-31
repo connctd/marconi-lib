@@ -35,8 +35,9 @@ MarconiClient::MarconiClient(IPAddress ip, int port, char device_id[DEVICE_ID_SI
 
     connection_state_callback_ = connection_state_callback;
 
-    coap_.start(port);
     coap_.response(serverCallback);
+
+    eventing_->debug("Marconi lib setup completed");
 }
 
 MarconiClient::~MarconiClient() {

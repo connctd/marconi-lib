@@ -10,7 +10,7 @@ const char* password = "affenwurst5";
 IPAddress ip(35, 205, 82, 53);
 int port = 5683;
 
-unsigned long resubscribeInterval = 600000; // in ms
+unsigned long resubscribeInterval = 60000; // in ms
 unsigned long propertyUpdateInterval = 2000; // in ms
 
 char device_id[DEVICE_ID_SIZE] = "0xl7n4igwd4k8g2t";  // unique device id
@@ -28,22 +28,17 @@ unsigned long lastResubscribe = 0; // periodically resubscribe
 unsigned long lastPropertyUpdate = 0; // time when property updates were sent
 bool initialized = false; // indicates if a session was initialized
 
-int LED_BUILTIN = 2; // use for ESP32
 
 void setup() {
-  // initialize pseudo random number generator since tokens are generated
-  srand (analogRead(0));
+  // initialize pseudo random number generator since tokens and cryptographic vectors are generated
+  // this is crucial! Otherwise encrypted messages will look the same and connector might ignore
+  // them due to caching
+  //srand (analogRead(0)); // for ESP8266 you might need to use a lib
+
+  srand(esp_random()); // for ESP32
   
   Serial.begin(115200);
 
-  pinMode(LED_BUILTIN, OUTPUT);
-
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("No connection! Connect!");
-    digitalWrite(LED_BUILTIN, LOW);
-    connectToWifi();
-  }
-  
   c = new MarconiClient(ip, port, device_id, key, onConnectionStateChange, onDebug, onErr);
 }
 
@@ -53,13 +48,13 @@ void loop() {
 
     // exchange session
     if (!initialized) {
-      initSession();
+      blockingInitSession();
     }
 
     // resubscribe if necessary
     if (initialized && (currTime - lastResubscribe > resubscribeInterval || lastResubscribe == 0 )) {
       lastResubscribe = currTime;
-      //c->subscribeForActions(onAction);
+      c->subscribeForActions(onAction);
     }
 
     // periodically send property updates
@@ -71,37 +66,26 @@ void loop() {
 
     // wait for incoming messages
     c->loop();
+  } else {
+    // reconnect mechanism
+    initialized = false;
+    lastResubscribe = 0;
+    
+    Serial.println("No connection! Connect!");
+    blockingConnectToWifi();
   }
 }
 
-// called whenever an error occurs in marconi lib
-void onErr(const unsigned char error) {
-    Serial.printf("[ERROR] ");
-    switch (error) {
-        case kErrorInvalidPlaintextSize:
-            Serial.println("Plaintext size too small");
-            break;
-        case kErrorInvalidCipherstreamSize:
-            Serial.println("Encryption failed. Cipherstream too small");
-            break;
-        case kErrorActionRequestRejected:
-            Serial.println("Received action request was rejected");
-            break;
-        case kErrorDecryptionFailed:
-            Serial.println("Decryption error");
-            break;
-        case kErrorEncryptionFailed:
-            Serial.println("Encryption error");
-            break;
-        default:
-            Serial.printf("Unknown error event %x\n", error);
-            break;
-    }
+// called whenever an action is invoked
+void onAction(char *actionId, char *value) {
+  Serial.println("Action called");
+  Serial.println(actionId);
+  Serial.println(value);
 }
 
 // called whenever marconi lib sends debug data
 void onDebug(const char *msg) {
-    Serial.printf("[DEBUG] %s\n", msg);
+    //Serial.printf("[DEBUG] %s\n", msg);
 } 
 
 // called whenever connection state changes
@@ -131,6 +115,9 @@ void onConnectionStateChange(const unsigned char state) {
 
         // reinit session in case connector was restarted
         initialized = false;
+
+        // after reinit we want to resubscribe
+        lastResubscribe = 0;
         break;
       default:
         Serial.printf("Unknown connection event %x\n", state);
@@ -138,16 +125,34 @@ void onConnectionStateChange(const unsigned char state) {
     }
 }
 
-// called whenever an action is invoked
-void onAction(char *actionId, char *value) {
-  Serial.println("Action called");
-  Serial.println(actionId);
-  Serial.println(value);
+// called whenever an error occurs in marconi lib
+void onErr(const unsigned char error) {
+    Serial.printf("[ERROR] ");
+    switch (error) {
+        case kErrorInvalidPlaintextSize:
+            Serial.println("Plaintext size too small");
+            break;
+        case kErrorInvalidCipherstreamSize:
+            Serial.println("Encryption failed. Cipherstream too small");
+            break;
+        case kErrorActionRequestRejected:
+            Serial.println("Received action request was rejected");
+            break;
+        case kErrorDecryptionFailed:
+            Serial.println("Decryption error");
+            break;
+        case kErrorEncryptionFailed:
+            Serial.println("Encryption error");
+            break;
+        default:
+            Serial.printf("Unknown error event %x\n", error);
+            break;
+    }
 }
 
 // requestes a session id from connector which will be exchanged in every
 // message to prevent replay attacks. Can be called multiple times
-void initSession() {
+void blockingInitSession() {
   initialized = false;
   Serial.println("Initializing session");
   
@@ -157,6 +162,10 @@ void initSession() {
     if (retries > 10) {
       Serial.println("\nSession can not be established. Resending init");
       retries = 0;
+      if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("No wifi connection. Abort session init");
+        return;
+      }
       c->init();
     }
 
@@ -170,7 +179,7 @@ void initSession() {
 }
 
 // can be used to connect to wifi
-void connectToWifi() {
+void blockingConnectToWifi() {
   WiFi.disconnect();
   WiFi.begin(ssid, password);
 
@@ -178,12 +187,8 @@ void connectToWifi() {
 
   while (WiFi.status() != WL_CONNECTED) {
     // SEEMS LIKE DEVICE MIGHT STAY HERE FOR AGES IN BUGGY CASES - reboot?
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(500);
-    digitalWrite(LED_BUILTIN, LOW);
     Serial.print(".");
     delay(500);
-
 
     if (retries > 10) {
       Serial.println("Max retries reached - reinitialize connection");
@@ -195,7 +200,6 @@ void connectToWifi() {
     retries += 1;
   }
 
-  digitalWrite(LED_BUILTIN, HIGH);
   Serial.println("");
   Serial.println("WiFi connected");
 
