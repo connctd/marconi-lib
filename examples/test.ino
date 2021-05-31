@@ -28,6 +28,10 @@ unsigned long lastResubscribe = 0; // periodically resubscribe
 unsigned long lastPropertyUpdate = 0; // time when property updates were sent
 bool initialized = false; // indicates if a session was initialized
 
+byte property_gauge = 0x01;
+byte property_co2 = 0x02;
+byte property_temperature = 0x03;
+byte property_humidity = 0x04;
 
 void setup() {
   // initialize pseudo random number generator since tokens and cryptographic vectors are generated
@@ -61,7 +65,7 @@ void loop() {
     if (initialized && currTime - lastPropertyUpdate > propertyUpdateInterval) {
       lastPropertyUpdate = currTime;
       //c->sendRawPropertyUpdate("state", "22.0");
-      c->sendFloatPropertyUpdate("temperature", 22.0);
+      c->sendFloatPropertyUpdate(property_temperature, 22.0);
     }
 
     // wait for incoming messages
@@ -77,10 +81,8 @@ void loop() {
 }
 
 // called whenever an action is invoked
-void onAction(char *actionId, char *value) {
-  Serial.println("Action called");
-  Serial.println(actionId);
-  Serial.println(value);
+void onAction(unsigned char actionId, char *value) {
+  Serial.printf("Action called. Id: %x Value: %s\n", actionId, value);
 }
 
 // called whenever marconi lib sends debug data

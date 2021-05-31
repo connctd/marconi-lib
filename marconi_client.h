@@ -10,7 +10,7 @@
 
 typedef void connectionStateCallback(const unsigned char code);
 
-typedef void actionCallback(char *actionId, char *value);
+typedef void actionCallback(uint8_t actionId, char *value);
 
 class MarconiClient{
 	public:
@@ -26,8 +26,8 @@ class MarconiClient{
 		void handleServerMessage(coapPacket &packet, IPAddress ip, int port);
 
 		// can be used to send a property update
-		void sendRawPropertyUpdate(char property_id[PROPERTY_ID_SIZE], char *value);
-		void sendFloatPropertyUpdate(char property_id[PROPERTY_ID_SIZE], float value);
+		void sendRawPropertyUpdate(uint8_t property_id, char *value);
+		void sendFloatPropertyUpdate(uint8_t property_id, float value);
 
 		void subscribeForActions(actionCallback *action_callback);
 

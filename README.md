@@ -54,10 +54,8 @@ void onConnectionStateChange(const unsigned char state) {
 }
 
 // called whenever an action is invoked
-void onAction(char *actionId, char *value) {
-  Serial.println("Action called");
-  Serial.println(actionId);
-  Serial.println(value);
+void onAction(unsigned char actionId, char *value) {
+  Serial.printf("Action called. Id: %x Value: %s\n", actionId, value);
 }
 
 void onDebug(const char *msg) {
@@ -69,15 +67,21 @@ void onDebug(const char *msg) {
 
 Some primitve tests are used to ensure parts of lib are working in expected manner.
 
-Get dependencies (see below) and do `make test` afterwards.
-
-## Dependencies
-
 ```
 cd $HOME/Arduino/libraries
 
 # simulates core functionalities of arduino so you can execute tests on local machine (for testing)
 git clone https://github.com/bxparks/EpoxyDuino.git
+cd EpoxyDuino
+make
+```
+
+Get further dependencies (see below) and do `make test` afterwards.
+
+## Dependencies
+
+```
+cd $HOME/Arduino/libraries
 
 # library that offers crypto functionalities
 git clone https://github.com/OperatorFoundation/Crypto.git

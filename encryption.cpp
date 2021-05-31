@@ -73,7 +73,7 @@ bool Encryption::encrypt(uint8_t *in, int in_size, uint8_t *out, int out_size) {
 }
 
 int Encryption::calc_cipherstream_size(int plaintext_size) {
-	return CHACHA_IV_SIZE +plaintext_size + CHACHA_AUTH_TAG_SIZE;
+	return CHACHA_IV_SIZE*sizeof(uint8_t) + plaintext_size + CHACHA_AUTH_TAG_SIZE*sizeof(uint8_t);
 }
 
 bool Encryption::decrypt(uint8_t *in, int in_size, uint8_t *out, int out_size) {
@@ -127,7 +127,7 @@ bool Encryption::decrypt(uint8_t *in, int in_size, uint8_t *out, int out_size) {
 }
 
 int Encryption::calc_plaintext_size(int cipherstream_size) {
-	return cipherstream_size-CHACHA_IV_SIZE-CHACHA_AUTH_TAG_SIZE;
+	return cipherstream_size-CHACHA_IV_SIZE*sizeof(uint8_t)-CHACHA_AUTH_TAG_SIZE*sizeof(uint8_t);
 }
 
 void Encryption::increaseIv() {

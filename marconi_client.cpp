@@ -62,33 +62,33 @@ bool MarconiClient::loop() {
 }
 
 // can be used to send a property update
-void MarconiClient::sendRawPropertyUpdate(char property_id[PROPERTY_ID_SIZE], char *value) {
+void MarconiClient::sendRawPropertyUpdate(uint8_t property_id, char *value) {
     eventing_->debug("Sending property update");
 
-    int unencryptedSize = sizeof(long)+SESSION_SIZE+PROPERTY_ID_SIZE+strlen(value)*sizeof(char);
+    int unencrypted_size = sizeof(long)+SESSION_SIZE*sizeof(uint8_t)+1*sizeof(uint8_t)+strlen(value)*sizeof(char);
     uint8_t *unencrypted = parser_->buildPropertyUpdate(property_counter_id_, session_id_, property_id, value);
 
     // calculate size of cipherstream
-    int encryptedSize = encr_->calc_cipherstream_size(unencryptedSize);
-    unsigned char encrypted[encryptedSize];
-    memset(encrypted, 0, sizeof(unsigned char)*encryptedSize);
+    int encrypted_length = encr_->calc_cipherstream_size(unencrypted_size);
+    unsigned char encrypted[encrypted_length];
+    memset(encrypted, 0, sizeof(unsigned char)*encrypted_length);
 
     // do the encryption
-    if (!encr_->encrypt(unencrypted, unencryptedSize, encrypted, encryptedSize)) {
+    if (!encr_->encrypt(unencrypted, unencrypted_size, encrypted, encrypted_length)) {
         eventing_->debug("Encryption of property update has failed");
         eventing_->error(kErrorEncryptionFailed);
     } else {
         property_counter_id_ += 1;
         uint8_t token=rand();
         eventing_->debug("Now sending property update");
-        coap_.send(ip_, port_, path_state_, COAP_CON, COAP_POST, &token, sizeof(token), encrypted, encryptedSize, 0, NULL);
+        coap_.send(ip_, port_, path_state_, COAP_CON, COAP_POST, &token, sizeof(token), encrypted, encrypted_length, 0, NULL);
     }
 
     // free memory
     delete [] unencrypted;
 }
 
-void MarconiClient::sendFloatPropertyUpdate(char property_id[PROPERTY_ID_SIZE], float value) {
+void MarconiClient::sendFloatPropertyUpdate(uint8_t property_id, float value) {
     char buf[20];
     sprintf(buf, "%f", value);
     sendRawPropertyUpdate(property_id, buf);
@@ -102,16 +102,16 @@ void MarconiClient::subscribeForActions(actionCallback *action_callback) {
     // inform about requested subscription
     connection_state_callback_(kConnectionObservationRequested);
 
-    int unencryptedSize = sizeof(long)+SESSION_SIZE+PROPERTY_ID_SIZE+sizeof(char);
+    int unencrypted_size = sizeof(long)+SESSION_SIZE+2*sizeof(char);
     uint8_t *unencrypted = parser_->buildActionSubscription(property_counter_id_, session_id_);
 
     // calculate size of cipherstream
-    int encryptedSize = encr_->calc_cipherstream_size(unencryptedSize);
-    unsigned char encrypted[encryptedSize];
-    memset(encrypted, 0, sizeof(unsigned char)*encryptedSize);
+    int encrypted_size = encr_->calc_cipherstream_size(unencrypted_size);
+    unsigned char encrypted[encrypted_size];
+    memset(encrypted, 0, sizeof(unsigned char)*encrypted_size);
 
     // do the encryption
-    if (!encr_->encrypt(unencrypted, unencryptedSize, encrypted, encryptedSize)) {
+    if (!encr_->encrypt(unencrypted, unencrypted_size, encrypted, encrypted_size)) {
         eventing_->debug("Encryption of action subscription has failed");
         eventing_->error(kErrorEncryptionFailed);
     } else {
@@ -120,7 +120,7 @@ void MarconiClient::subscribeForActions(actionCallback *action_callback) {
         // send observe message including encrypted payload
         uint8_t token=rand();
         eventing_->debug("Now sending subscription request");
-        last_observe_msg_id_ = coap_.send(ip_, port_, path_action_, COAP_CON,COAP_GET, &token, sizeof(token), encrypted, encryptedSize, COAP_OBSERVE, NULL);
+        last_observe_msg_id_ = coap_.send(ip_, port_, path_action_, COAP_CON,COAP_GET, &token, sizeof(token), encrypted, encrypted_size, COAP_OBSERVE, NULL);
     }
 
     // free memory

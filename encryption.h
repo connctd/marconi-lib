@@ -22,7 +22,7 @@ class Encryption{
 		
 		// used to encrypt a message
 		bool encrypt(uint8_t *in, int in_size, uint8_t *out, int out_size);
-		// given the length of plaintext to encrypt this func will calculate the size of the resulting cipherstream
+		// given the length of plaintext to encrypt this func will calculate the amount of bytes of the resulting cipherstream
 		int calc_cipherstream_size(int plaintext_size);
 
 		bool decrypt(uint8_t *in, int in_size, uint8_t *out, int out_size);

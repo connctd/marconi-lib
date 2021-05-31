@@ -10,14 +10,18 @@ void propertyTest() {
 
     Parser p(NULL, NULL);
     // for testing purpose we just take a 0 terminated string as session id
-    uint8_t *res = p.buildPropertyUpdate(123, (unsigned char*)"aaaaaaa", "bbbbbbbbbbbbbb", "ccc");
+    unsigned char dummySession[SESSION_SIZE] = {0x61,0x61,0x61,0x61,0x61,0x61,0x61,0x61};
+    uint8_t *res = p.buildPropertyUpdate(123, dummySession, 0xbb, "ccc");
 
-    uint8_t expected[35] = {
-        0x7B,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x61,0x61,0x61,0x61,0x61,0x61,0x61,0x00,0x62,0x62,0x62,0x62,0x62,0x62,0x62,0x62,0x62,0x62,0x62,0x62,0x62,0x62,0x00,0x00,0x63,0x63,0x63,
+    uint8_t expected[20] = {
+        0x7B,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+        0x61,0x61,0x61,0x61,0x61,0x61,0x61,0x61,
+        0xBB,
+        0x63,0x63,0x63,
     };
 
     // compare expected with result
-    verify(memcmp(res, expected, 35) == 0);
+    verify(memcmp(res, expected, 20) == 0);
 
     delete res;
 }
@@ -29,12 +33,13 @@ void actionTest() {
     // for testing purposes build an property, serialize it and parse it as an action
     Parser p(NULL, NULL);
         // for testing purpose we just take a 0 terminated string as session id
-    uint8_t *res = p.buildPropertyUpdate(123, (unsigned char*)"aaaaaaa", "bbbbbbbbbbbbbb", "ccc");
+    unsigned char dummySession[SESSION_SIZE] = {0x61,0x61,0x61,0x61,0x61,0x61,0x61,0x61};
+    uint8_t *res = p.buildPropertyUpdate(123, dummySession, 0xbb, "ccc");
 
-    ActionRequest a = p.parseAction(res, 35);
+    ActionRequest a = p.parseAction(res, 20);
     verify(a.action_counter_id == 123);
-    verify(strcmp((char*)a.session_id, "aaaaaaa") == 0);
-    verify(strcmp(a.id, "bbbbbbbbbbbbbb") == 0);
+    verify(memcmp(a.session_id, dummySession, 8) == 0);
+    verify(a.id == 0xbb);
     verify(strcmp(a.value, "ccc") == 0);
 
     delete res;
