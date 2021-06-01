@@ -42,7 +42,7 @@ ActionRequest Parser::parseAction(uint8_t *payload, uint8_t payloadlen) {
     memset(value, 0, payloadlen - minimal_expected_length + 1);
 
     ActionRequest a = {
-        {}, // id
+        0x00, // id
         value, // value
         0, // action id
         {}, // session id
