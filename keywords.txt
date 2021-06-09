@@ -1,0 +1,19 @@
+#######################################
+# Syntax Coloring Map For Marconi Lib
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+MarconiClient KEYWORD1
+
+
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+
+connectionStateCallback KEYWORD2
+actionCallback KEYWORD2
