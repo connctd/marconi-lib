@@ -7,8 +7,21 @@
 #######################################
 
 MarconiClient KEYWORD1
+CHACHA_KEY_SIZE KEYWORD1
+DEVICE_ID_SIZE KEYWORD1
 
-
+kConnectionStateUninitialized KEYWORD1
+kConnectionStateInitialized KEYWORD1
+kConnectionStateInitRejected KEYWORD1
+kConnectionObservationRequested KEYWORD1
+kConnectionObservationOngoing KEYWORD1
+kConnectionObservationRejected KEYWORD1
+kErrorInvalidSessionSize KEYWORD1
+kErrorDecryptionFailed KEYWORD1
+kErrorEncryptionFailed KEYWORD1
+kErrorActionRequestRejected KEYWORD1
+kMessageCodeCreated KEYWORD1
+kMessageCodeContent KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)
