@@ -32,6 +32,9 @@ byte property_gauge = 0x01;
 byte property_co2 = 0x02;
 byte property_temperature = 0x03;
 byte property_humidity = 0x04;
+byte property_gauge_dimm = 0x05;
+byte property_pressure = 0x06;
+byte property_indicator = 0x07;
 
 void setup() {
   // initialize pseudo random number generator since tokens and cryptographic vectors are generated
@@ -83,6 +86,17 @@ void loop() {
 // called whenever an action is invoked
 void onAction(unsigned char actionId, char *value) {
   Serial.printf("Action called. Id: %x Value: %s\n", actionId, value);
+
+  if (actionId == property_indicator) {
+    // just test...better check value
+    if (value[0] == 0x31) {
+      Serial.println("Turn on warning led");
+      c->sendBooleanPropertyUpdate(property_indicator, true);
+    } else {
+      Serial.println("Turn off warning led");
+      c->sendBooleanPropertyUpdate(property_indicator, false);
+    }
+  }
 }
 
 // called whenever marconi lib sends debug data

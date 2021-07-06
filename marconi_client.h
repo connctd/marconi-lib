@@ -28,6 +28,7 @@ class MarconiClient{
 		// can be used to send a property update
 		void sendRawPropertyUpdate(uint8_t property_id, char *value);
 		void sendFloatPropertyUpdate(uint8_t property_id, float value);
+		void sendBooleanPropertyUpdate(uint8_t property_id, bool value);
 
 		void subscribeForActions(actionCallback *action_callback);
 

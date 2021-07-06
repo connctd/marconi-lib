@@ -94,6 +94,16 @@ void MarconiClient::sendFloatPropertyUpdate(uint8_t property_id, float value) {
     sendRawPropertyUpdate(property_id, buf);
 }
 
+void MarconiClient::sendBooleanPropertyUpdate(uint8_t property_id, bool value) {
+    if (value) {
+        char buf[2] = {0x31, 0x00};
+        sendRawPropertyUpdate(property_id, buf);
+    } else {
+        char buf[2] = {0x30, 0x00};
+        sendRawPropertyUpdate(property_id, buf);
+    }
+}
+
 void MarconiClient::subscribeForActions(actionCallback *action_callback) {
     eventing_->debug("Subscribing for action");
 
