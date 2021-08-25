@@ -111,6 +111,9 @@ void onConnectionStateChange(const unsigned char state) {
       case kConnectionStateInitialized:
         Serial.println("Session was initialized");
         initialized = true;
+
+        // fore resubscribe after reinit
+        lastResubscribe = 0;
         break;
       case kConnectionStateUninitialized:
         Serial.println("Session initialization ongoing");
