@@ -51,6 +51,8 @@ MarconiClient::~MarconiClient() {
 }
 
 // can be periodically called and triggers the session creation
+// Note: after reinitializing a session you need to resubscribe for actions as
+// encryption relevant data will change
 void MarconiClient::init() {
     connection_state_callback_(kConnectionStateUninitialized);
     eventing_->debug("Sending session init");
