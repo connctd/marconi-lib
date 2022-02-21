@@ -26,6 +26,9 @@ MarconiClient::MarconiClient(IPAddress ip, int port, char device_id[DEVICE_ID_SI
     path_session_ = path_session;
     path_action_ = path_action;
 
+    eventing_->debug("Marconi library version");
+    eventing_->debug(STRINGIFY(VERSION));
+
     eventing_->debug("Using the following paths");
     eventing_->debug(path_state_);
     eventing_->debug(path_session_);
@@ -145,10 +148,16 @@ void MarconiClient::handleServerMessage(coapPacket &packet, IPAddress ip, int po
     // this is the response to our init request
     if (packet.messageid == last_init_msg_id_) {
         handleSessionResponse(packet, ip, port);
+
+        // reset init msg id as the init request was obviously handled
+        last_init_msg_id_ = -1;
     }
     // this is the response to our observation request
     else if (packet.messageid == last_observe_msg_id_) {
         handleObservationResponse(packet, ip, port);
+
+        // reset observe msg id as the observation request was obviously handled
+        last_observe_msg_id_ = -1;
     }
     else if (packet.type == COAP_CON || packet.type == COAP_NONCON) {
         if (packet.type == COAP_CON && packet.code == COAP_EMPTY) {

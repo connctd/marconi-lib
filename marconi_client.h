@@ -6,6 +6,16 @@
 #include "parser.h"
 #include "coap_client.h"
 
+#define VERSION_MAJOR 1
+#define VERSION_MINOR 0
+#define VERSION_BUILD 1
+
+#define _STRINGIFY(x) #x
+#define STRINGIFY(x) _STRINGIFY(x)
+
+#define VERSION VERSION_MAJOR.VERSION_MINOR.VERSION_BUILD
+
+
 #define DEVICE_ID_SIZE 16 + 1 // since this is a string reserve one byte for 0 termination
 
 typedef void connectionStateCallback(const unsigned char code);
